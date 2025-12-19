@@ -1,25 +1,36 @@
-import requests
-from PIL import Image, ImageDraw, ImageFont, ImageFilter, UnidentifiedImageError
-from io import BytesIO
 import os
 import shutil
 import textwrap
-from dotenv import load_dotenv
+from io import BytesIO
 
-load_dotenv(verbose=True)
+import requests
+from dotenv import load_dotenv
+from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
+
+# Charge le fichier .env à la racine du projet
+load_dotenv()
 
 # Replace with your actual Trakt API key, TMDB API Read Access Token, username, and list name
-TRAKT_API_KEY = os.getenv('TRAKT_API_KEY')
-TRAKT_USERNAME = os.getenv('TRAKT_USERNAME')
-TRAKT_LISTNAME = os.getenv('TRAKT_LISTNAME')
-TMDB_BEARER_TOKEN = os.getenv('TMDB_BEARER_TOKEN')
-TMDB_BASE_URL = os.getenv('TMDB_BASE_URL')
+TRAKT_API_KEY = os.getenv("TRAKT_API_KEY")
+TRAKT_USERNAME = os.getenv("TRAKT_USERNAME")
+TRAKT_LIST_NAME = os.getenv("TRAKT_LIST_NAME")
 
 # Set your TMDB API Read Access Token key here after Bearer
-tmdb_headers = {
+TMDB_HEADERS = {
     "accept": "application/json",
-    "Authorization": f"Bearer {TMDB_BEARER_TOKEN}"
+    "Authorization": f"Bearer {os.getenv('TMDB_BEARER_TOKEN')}"
 }
+
+# Base URL for the API
+TMDB_BASE_URL = "https://api.themoviedb.org/3/"
+
+# Language
+LANGUAGE = os.getenv("LANGUAGE", "fr-FR")
+LANGUAGE_SHORT = LANGUAGE.split("-")[0]
+
+MAX_WALLPAPERS_TO_CREATE = int(os.getenv("MAX_WALLPAPERS_TO_CREATE", "7"))
+
+ONLY_LOGO_ACCEPTED = os.getenv("ONLY_LOGO_ACCEPTED", "True").lower() in ("true", "1")
 
 # Save font locally
 truetype_url = 'https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Light.ttf'
@@ -57,7 +68,7 @@ def get_trakt_movies_and_shows(api_key, username, list_name):
         "trakt-api-key": api_key
     }
 
-    response = requests.get(url, headers=traktheaders)
+    response = requests.get(url, headers=traktheaders, timeout=5)
     if response.status_code == 200:
         items = response.json()
         movies = [(item['movie']['title'], item['movie']['ids']['tmdb']) for item in items if item['type'] == 'movie']
@@ -68,12 +79,17 @@ def get_trakt_movies_and_shows(api_key, username, list_name):
         return [], []
 
 # Function to fetch the logo for a movie or TV show from TMDB
-def get_logo(media_type, media_id, language="en"):
-    logo_url = f"{TMDB_BASE_URL}{media_type}/{media_id}/images?language={language}"
-    logo_response = requests.get(logo_url, headers=tmdb_headers)
-    logo_data = logo_response.json()
+def get_logo(media_type, media_id):
+    logo_url = f"{TMDB_BASE_URL}{media_type}/{media_id}/images?language={LANGUAGE_SHORT}&include_image_language=fr,en,null"
+    logo_response = requests.get(logo_url, headers=TMDB_HEADERS, timeout=5)
     if logo_response.status_code == 200:
         logos = logo_response.json().get("logos", [])
+        for logo in logos:
+            if logo["iso_639_1"] == LANGUAGE_SHORT and logo["file_path"].endswith(".png"):
+                return logo["file_path"]
+        for logo in logos:
+            if logo["iso_639_1"] is None and logo["file_path"].endswith(".png"):
+                return logo["file_path"]
         for logo in logos:
             if logo["iso_639_1"] == "en" and logo["file_path"].endswith(".png"):
                 return logo["file_path"]
@@ -100,18 +116,18 @@ def resize_logo(image, width, height):
 
 # Function to get details of a TV show from TMDB
 def get_tv_show_details(tv_id):
-    tv_details_url = f'{TMDB_BASE_URL}tv/{tv_id}?language=en-US'
-    tv_details_response = requests.get(tv_details_url, headers=tmdb_headers)
+    tv_details_url = f'{TMDB_BASE_URL}tv/{tv_id}?language={LANGUAGE_SHORT}'
+    tv_details_response = requests.get(tv_details_url, headers=TMDB_HEADERS, timeout=5)
     return tv_details_response.json()
 
 # Function to get details of a movie from TMDB
 def get_movie_details(movie_id):
-    movie_details_url = f'{TMDB_BASE_URL}movie/{movie_id}?language=en-US'
-    movie_details_response = requests.get(movie_details_url, headers=tmdb_headers)
+    movie_details_url = f'{TMDB_BASE_URL}movie/{movie_id}?language={LANGUAGE_SHORT}'
+    movie_details_response = requests.get(movie_details_url, headers=TMDB_HEADERS, timeout=5)
     return movie_details_response.json()
 
 # Create a directory to save the backgrounds and clear its contents if it exists
-background_dir = "trakt_backgrounds"
+background_dir = "backgrounds"
 if os.path.exists(background_dir):
     shutil.rmtree(background_dir)
 os.makedirs(background_dir, exist_ok=True)
@@ -122,11 +138,15 @@ def fetch_and_save_background_images(movies, shows):
     if not os.path.exists(directory):
         os.makedirs(directory)
     
+    NB_WALLPAPERS_CREATED = 0
     for title, tmdb_id in shows + movies:
+        if NB_WALLPAPERS_CREATED >= MAX_WALLPAPERS_TO_CREATE:
+            break
         if tmdb_id:
-            bckg = Image.open(os.path.join(os.path.dirname(__file__), "bckg.png"))
-            overlay = Image.open(os.path.join(os.path.dirname(__file__), "overlay.png"))
-            traktlogo = Image.open(os.path.join(os.path.dirname(__file__), "traktlogo.png"))
+            assets_dir = os.path.join(os.path.dirname(__file__), "assets")
+            bckg = Image.open(os.path.join(assets_dir, "bckg.png"))
+            overlay = Image.open(os.path.join(assets_dir, "overlay.png"))
+            traktlogo = Image.open(os.path.join(assets_dir, "kodilogo.png"))
 
             if title in [show[0] for show in shows]:
                 show_data = get_tv_show_details(tmdb_id)
@@ -138,7 +158,7 @@ def fetch_and_save_background_images(movies, shows):
             backdrop_path = show_data.get("backdrop_path")
             if backdrop_path:
                 image_url = f"https://image.tmdb.org/t/p/original{backdrop_path}"
-                image_response = requests.get(image_url)
+                image_response = requests.get(image_url, timeout=5)
                 if image_response.status_code == 200:
                     show_image = Image.open(BytesIO(image_response.content))
                     show_image = resize_image(show_image, 1500)
@@ -158,41 +178,20 @@ def fetch_and_save_background_images(movies, shows):
                     metadata_color = (150, 150, 150)
 
                     # Text position
-                    title_position = (200, 420)
+                    title_position = (200, 400)
                     overview_position = (210, 730)
                     shadow_offset = 2
                     info_position = (210, 650)
-                    custom_position = (210, 870)
 
                     #paste overlay
                     bckg.paste(overlay, (bckg.width - overlay.width, 0), overlay)
-
-                    #paste logo and if no logo exists in english draw show title  
-                    logo_path = get_logo(media_type, tmdb_id)
-                    if logo_path:
-                        logo_url = f"https://image.tmdb.org/t/p/original{logo_path}"
-                        logo_response = requests.get(logo_url)                        
-                        try:
-                            if logo_response.status_code == 200:
-                                logo_image = Image.open(BytesIO(logo_response.content))
-                                logo_image = resize_logo(logo_image, 1000, 500)
-                                logo_image = logo_image.convert("RGBA")
-                                logo_position = (210, info_position[1] - logo_image.height - 25)
-                                bckg.paste(logo_image, logo_position, logo_image)
-                            else:
-                                print(f"Error downloading logo for {title}: status code {logo_response.status_code}")
-                                draw.text(title_position, title, fill="white", font=font_title)
-                        except UnidentifiedImageError:
-                            print(f"Error identifying logo image for {title}")
-                            draw.text(title_position, title, fill="white", font=font_title)
-                    else:
-                        draw.text(title_position, title, fill="white", font=font_title)
 
                     #get metadata
                     info = ""
                     overview = ""
                     if media_type == "movie":
                         movie_details = get_movie_details(tmdb_id)
+                        tmdb_title = movie_details.get('title')
                         genres = ", ".join([genre['name'] for genre in movie_details.get('genres', [])])
                         year = movie_details.get('release_date', '')[:4]
                         duration = movie_details.get('runtime', 0)
@@ -202,40 +201,72 @@ def fetch_and_save_background_images(movies, shows):
                         info = f"{genres}  •  {year}  •  {hours}h{minutes}min  •  TMDB: {tmdb_score}"
                     elif media_type == "tv":
                         tv_details = get_tv_show_details(tmdb_id)
+                        tmdb_title = movie_details.get('title')
                         genres = ", ".join([genre['name'] for genre in tv_details.get('genres', [])])
                         year = tv_details.get('first_air_date', '')[:4]
                         seasons = tv_details.get('number_of_seasons', 0)
                         tmdb_score = round(tv_details.get('vote_average', 0),1)
                         overview = tv_details.get('overview')
                         info = f"{genres}  •  {year}  •  {seasons} {'Season' if seasons == 1 else 'Seasons'}  •  TMDB: {tmdb_score}"
+                        
+                    #paste logo and if no logo exists draw show title  
+                    logo_path = get_logo(media_type, tmdb_id)
+                    if logo_path:
+                        logo_url = f"https://image.tmdb.org/t/p/original{logo_path}"
+                        logo_response = requests.get(logo_url, timeout=5)
+                        try:
+                            if logo_response.status_code == 200:
+                                logo_image = Image.open(BytesIO(logo_response.content))
+                                logo_image = resize_logo(logo_image, 1000, 500)
+                                logo_image = logo_image.convert("RGBA")
+                                logo_position = (210, info_position[1] - logo_image.height - 25)
+                                bckg.paste(logo_image, logo_position, logo_image)
+                            else:
+                                print(f"Error downloading logo for {title}: status code {logo_response.status_code}")
+                                draw.text(title_position, tmdb_title, fill="white", font=font_title)
+                        except UnidentifiedImageError:
+                            print(f"Error identifying logo image for {title}")
+                            draw.text(title_position, tmdb_title, fill="white", font=font_title)
+                    elif not ONLY_LOGO_ACCEPTED:
+                        draw.text(title_position, tmdb_title, fill="white", font=font_title)
+                    else:
+                        # Only logo accepted, skip if no logo
+                        print(f"No logo found for {title}, skipping as ONLY_LOGO_ACCEPTED is set")
+                        continue
 
                     #draw show info
                     draw.text((info_position[0] + shadow_offset, info_position[1] + shadow_offset), info, font=font_info, fill=shadow_color)
                     draw.multiline_text(info_position, info, font=font_info, fill=metadata_color)
 
                     #draw overview
-                    wrapped_overview = "\n".join(textwrap.wrap(overview, width=70, max_lines=2, placeholder=" ..."))
+                    wrapped_overview = "\n".join(textwrap.wrap(overview, width=70, max_lines=6, placeholder=" ..."))
                     overview_position = (210, info_position[1] + 70)
                     draw.text((overview_position[0] + shadow_offset, overview_position[1] + shadow_offset), wrapped_overview, font=font_overview, fill=shadow_color)
                     draw.multiline_text(overview_position, wrapped_overview, font=font_overview, fill=overview_color)
 
+                    #calculate overview size to adjust
+                    overview_lines = len(wrapped_overview.split("\n"))
+                    offset_overview = (overview_lines - 1) * 56
+                    
                     #draw custom text and paste trakt logo
-                    custom_text = f"Now on my {list_name} "
+                    custom_position = (210, 818 + offset_overview)
+                    custom_text = "En ce moment sur"
                     draw.text((custom_position[0] + shadow_offset, custom_position[1] + shadow_offset), custom_text, font=font_custom, fill=shadow_color)
                     draw.text(custom_position, custom_text, font=font_custom, fill=overview_color)
-                    bckg.paste(traktlogo, (780, 885), traktlogo)
+                    bckg.paste(traktlogo, (710, 825 + offset_overview), traktlogo)
 
                     #save image
                     image_path = os.path.join(directory, f"{clean_filename(title)}.jpg")
                     bckg = bckg.convert('RGB')
                     bckg.save(image_path, "JPEG")
+                    NB_WALLPAPERS_CREATED += 1
                 else:
                     print(f"Error downloading image for {title}: status code {image_response.status_code}")
             else:
                 print(f"No background image found for {title}")
 
 # Fetch movie and show lists from Trakt API
-movies_list, shows_list = get_trakt_movies_and_shows(trakt_api_key, username, list_name)
+movies_list, shows_list = get_trakt_movies_and_shows(TRAKT_API_KEY, TRAKT_USERNAME, TRAKT_LIST_NAME)
 
 # Fetch and save background images for the movies and shows
 fetch_and_save_background_images(movies_list, shows_list)

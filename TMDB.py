@@ -315,9 +315,10 @@ def process_image(image_url, title, is_movie, genre, year, rating, duration=None
         image = resize_image(image, 1500)
 
         # Open overlay images
-        bckg = Image.open(os.path.join(os.path.dirname(__file__), "bckg.png"))
-        overlay = Image.open(os.path.join(os.path.dirname(__file__), "overlay.png"))
-        tmdblogo = Image.open(os.path.join(os.path.dirname(__file__), "tmdblogo.png"))
+        assets_dir = os.path.join(os.path.dirname(__file__), "assets")
+        bckg = Image.open(os.path.join(assets_dir, "bckg.png"))
+        overlay = Image.open(os.path.join(assets_dir, "overlay.png"))
+        tmdblogo = Image.open(os.path.join(assets_dir, "tmdblogo.png"))
 
         # Paste images
         bckg.paste(image, (1175, 0))

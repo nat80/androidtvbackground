@@ -412,7 +412,8 @@ def process_image(image_url, title, is_movie, genre, year, rating, duration=None
 
         draw = ImageDraw.Draw(bckg)
 
-        tmdblogo = Image.open(os.path.join(os.path.dirname(__file__), "tmdblogo.png"))
+        assets_dir = os.path.join(os.path.dirname(__file__), "assets")
+        tmdblogo = Image.open(os.path.join(assets_dir, "tmdblogo.png"))
 
         # Fonts
         font_title = ImageFont.truetype(truetype_path, size=190)

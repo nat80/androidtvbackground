@@ -1,3 +1,13 @@
 ﻿env
-*_backgrounds/*
+*backgrounds/*
 *.tff
+
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.DS_Store
+.env
+run.log

@@ -1,19 +1,17 @@
 # Android TV Background
 
-This is a simple script to retrieve Plex (your local server or friend's servers), Jellyfin, TMDB, Radarr/Sonarr or Trakt media background and use it as Android TV Wallpaper
+This is a simple script to retrieve Plex, Jellyfin, TMDB or Trakt media background and use it as Android TV Wallpaper
 I developed this to use it with alternative Android TV launchers
 
 ![y](https://github.com/adelatour11/androidtvbackground/assets/1473994/8039b728-469f-4fd9-8ca5-920e57bd16d9)
 
 
-
 To use the script, you have to specify : 
-- Create a `.env` file by copying `.env.example` and update it with your various tokens and keys or by directly modifying the .py files below
-- For Plex.py script & plexfriend.py : your plex token and plex server url
+- For Plex.py script : your plex token and plex server url either in the script or in a `.env` file
+    - Create a `.env` file by copying `.env.example` and update it with your Plex token and server URL
 - For TMDB.py or TMDBlogo.py : your TMDB API Read Access Token
-- For radarrsonarr.py your TMDB API Read Access Token, your Radarr API key, you Sonarr API key
 - For Trakt.py, your Trakt client key, Trakt username, Trakt list name and TMDB API Read Access Token
-- For Jellyfin.py, your server url, an API token and a user_id 
+- For Jellyfin.py, your server url, token and user id
 
 The scripts retrieves the background of the latests shows (movies or tv shows), resizes the image, add an overlay and add text or image on top
 
@@ -32,35 +30,6 @@ The scripts retrieves the background of the latests shows (movies or tv shows), 
 ![image](https://github.com/adelatour11/androidtvbackground/assets/1473994/2e92f213-21f9-4147-b678-0ee4dd0546ad)
 
 ![image](https://github.com/adelatour11/androidtvbackground/assets/1473994/03aecbcd-e2fd-4969-b0a2-0346d1842705)
-
-<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/9c6fd3d9-99ec-4a7e-8845-49ce3daa7739" />
-
-![Eddington_20250722](https://github.com/user-attachments/assets/02797fe1-5487-436b-b8c9-74c34978c3a0)
-
-![Foundation_20250722](https://github.com/user-attachments/assets/9adcc755-879a-4b29-99dd-ce373ce141f4)
-
-
-**New Feature** :
-
-You can now set the language for TMDB.py, TMDB_color.py, radarrsonarr.py and radarrsonarr_color.py
-
-In your .env file you can specify a language code : ```TMDB_LANGUAGE = "pt-BR"```
-
-FYI, if there is no logo in the specified language it retrieves the english version logo/
-
-**New Scripts**
-
-I have a included a series of scripts to have a colorized version of each background
-plex_color.py / TMDB_color.py / radarrsonarr_color.py / plexfriends_color.py
-It looks linke this
-
-![One_Battle_After_Another_20251010](https://github.com/user-attachments/assets/1257d570-8c9b-4e11-8fb5-69369e9f3ba6)
-
-![TRON_Ares_20251010](https://github.com/user-attachments/assets/cc898508-de38-4654-8a78-76cc8713b5b4)
-
-![Monster_The_Ed_Gein_Story_20251010](https://github.com/user-attachments/assets/61f19068-68bc-433d-8177-75e366c696c7)
-
-
 
 **Note :**
 If you are looking for the docker version check out this branch https://github.com/adelatour11/androidtvbackground/tree/docker
@@ -87,7 +56,6 @@ If you are looking for the docker version check out this branch https://github.c
 
 ***Plex Script***
 - For the plex script you can specify the number of poster to generate, specify if you want to include movies and tv, specify if you want latest added or latest aired items. You can also edit the code to change the text position or content
-- the plexfriend.py script retrieves the tvshows and movies from your friends shared libraries
 
 ***TMDB Scripts***
 - Shows that do not have the logo on TMDB will just have the title displayed
