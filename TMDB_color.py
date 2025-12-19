@@ -228,8 +228,12 @@ trending_tvshows = {'results': valid_tvshows}
 
 background_dir = "tmdb_backgrounds"
 if os.path.exists(background_dir):
-    shutil.rmtree(background_dir)
-os.makedirs(background_dir, exist_ok=True)
+    for file in os.listdir(background_dir):
+        file_path = os.path.join(background_dir, file)
+        if os.path.isfile(file_path):
+            os.unlink(file_path)
+else:
+    os.makedirs(background_dir)
 
 
 # Truncate overview

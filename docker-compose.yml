@@ -1,0 +1,19 @@
+---
+services:
+  androidtvbackground:
+    build: .
+    container_name: androidtvbackground
+    restart: unless-stopped
+    volumes:
+      - ./backgrounds:/app/backgrounds
+      - ./logs:/app/logs
+      - ./crontab.txt:/app/crontab.txt
+    env_file: .env
+    environment:
+      - TZ=Europe/Paris
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep supercronic || exit 1"]
+      interval: 2m
+      timeout: 5s
+      retries: 3
+      start_period: 10s 

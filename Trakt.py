@@ -1,6 +1,6 @@
 import os
-import shutil
 import textwrap
+import time
 from io import BytesIO
 
 import requests
@@ -129,8 +129,12 @@ def get_movie_details(movie_id):
 # Create a directory to save the backgrounds and clear its contents if it exists
 background_dir = "backgrounds"
 if os.path.exists(background_dir):
-    shutil.rmtree(background_dir)
-os.makedirs(background_dir, exist_ok=True)
+    for file in os.listdir(background_dir):
+        file_path = os.path.join(background_dir, file)
+        if os.path.isfile(file_path):
+            os.unlink(file_path)
+else:
+    os.makedirs(background_dir)
 
 # Function to fetch and save background images for movies and shows
 def fetch_and_save_background_images(movies, shows):
@@ -143,17 +147,28 @@ def fetch_and_save_background_images(movies, shows):
         if NB_WALLPAPERS_CREATED >= MAX_WALLPAPERS_TO_CREATE:
             break
         if tmdb_id:
-            assets_dir = os.path.join(os.path.dirname(__file__), "assets")
-            bckg = Image.open(os.path.join(assets_dir, "bckg.png"))
-            overlay = Image.open(os.path.join(assets_dir, "overlay.png"))
-            traktlogo = Image.open(os.path.join(assets_dir, "kodilogo.png"))
+            try:
+                # Add delay to avoid rate limiting
+                time.sleep(0.5)
+                
+                assets_dir = os.path.join(os.path.dirname(__file__), "assets")
+                bckg = Image.open(os.path.join(assets_dir, "bckg.png"))
+                overlay = Image.open(os.path.join(assets_dir, "overlay.png"))
+                traktlogo = Image.open(os.path.join(assets_dir, "kodilogo.png"))
 
-            if title in [show[0] for show in shows]:
-                show_data = get_tv_show_details(tmdb_id)
-                media_type = "tv"
-            else:
-                show_data = get_movie_details(tmdb_id)
-                media_type = "movie"
+                if title in [show[0] for show in shows]:
+                    show_data = get_tv_show_details(tmdb_id)
+                    media_type = "tv"
+                else:
+                    show_data = get_movie_details(tmdb_id)
+                    media_type = "movie"
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+                print(f"Network error for {title}: {e}. Skipping...")
+                time.sleep(2)  # Wait longer before next attempt
+                continue
+            except Exception as e:
+                print(f"Error fetching data for {title}: {e}. Skipping...")
+                continue
                 
             backdrop_path = show_data.get("backdrop_path")
             if backdrop_path:

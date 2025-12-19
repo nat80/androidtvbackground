@@ -1,0 +1,7 @@
+# Supercronic crontab for androidtvbackground
+
+# Run Trakt.py every 6 hours on the hour
+0 */6 * * * /app/run.sh Trakt.py
+
+# Run Reddit.py every 6 hours at 5 minutes past the hour
+5 */6 * * * /app/run.sh Reddit.py

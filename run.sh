@@ -15,13 +15,14 @@ LOG_FILE="${LOG_DIR}/run.log"
 # Redirect all output to log file
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-# Activate the virtual environment
-if [ ! -d "$VENV_DIR" ]; then
-    echo "[$TIMESTAMP] Error: Virtual environment not found at $VENV_DIR"
-    exit 1
+# Activate the virtual environment only if not in Docker
+if [ -z "$DOCKER_CONTAINER" ]; then
+    if [ ! -d "$VENV_DIR" ]; then
+        echo "[$TIMESTAMP] Error: Virtual environment not found at $VENV_DIR"
+        exit 1
+    fi
+    source "$VENV_DIR/bin/activate"
 fi
-
-source "$VENV_DIR/bin/activate"
 
 # Check if script exists
 if [ -z "$1" ] || [ ! -f "${SCRIPT_DIR}/$1" ]; then
@@ -39,5 +40,9 @@ EXIT_CODE=$?
 
 echo "[$TIMESTAMP] Completed with exit code: $EXIT_CODE"
 
-deactivate
+# Deactivate only if we activated it
+if [ -z "$DOCKER_CONTAINER" ]; then
+    deactivate
+fi
+
 exit $EXIT_CODE
