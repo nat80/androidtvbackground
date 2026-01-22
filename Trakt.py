@@ -1,6 +1,7 @@
 import os
 import textwrap
 import time
+from datetime import datetime
 from io import BytesIO
 
 import requests
@@ -71,6 +72,8 @@ def get_trakt_movies_and_shows(api_key, username, list_name):
     response = requests.get(url, headers=traktheaders, timeout=5)
     if response.status_code == 200:
         items = response.json()
+        # Sort items by listed_at from most recent to oldest
+        items.sort(key=lambda x: datetime.fromisoformat(x.get('listed_at', '1970-01-01T00:00:00.000Z').replace('Z', '+00:00')), reverse=True)
         movies = [(item['movie']['title'], item['movie']['ids']['tmdb']) for item in items if item['type'] == 'movie']
         shows = [(item['show']['title'], item['show']['ids']['tmdb']) for item in items if item['type'] == 'show']
         return movies, shows
